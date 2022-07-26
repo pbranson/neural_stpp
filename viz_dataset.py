@@ -28,6 +28,7 @@ MAPS = {
     "pinwheel": None,
     "fmri": None,
     "gmm": None,
+    "swells": None
 }
 
 FIGSIZE = 10
@@ -166,6 +167,8 @@ def load_data(data, split="train"):
         return toy_datasets.GMMHawkes(split=split)
     elif data == "fmri":
         return datasets.BOLD5000(split=split)
+    elif data == "swells":
+        return datasets.Swell(split=split)
     else:
         raise ValueError(f"Unknown data option {data}")
 
