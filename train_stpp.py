@@ -95,6 +95,8 @@ def get_t0_t1(data):
         return torch.tensor([0.0]), torch.tensor([toy_datasets.END_TIME])
     elif data == "fmri":
         return torch.tensor([0.0]), torch.tensor([10.0])
+    elif data == "swells":
+        return torch.tensor([0.0]), torch.tensor([7.0])
     else:
         raise ValueError(f"Unknown dataset {data}")
 
@@ -103,6 +105,8 @@ def get_dim(data):
     if data == "gmm":
         return 1
     elif data == "fmri":
+        return 3
+    elif data == "swells":
         return 3
     else:
         return 2
@@ -201,7 +205,7 @@ def _main(rank, world_size, args, savepath, logger):
     if rank == 0:
         logger.info(f"{len(train_set)} training examples, {len(val_set)} val examples, {len(test_set)} test examples")
 
-    x_dim = get_dim(args.data)
+    x_dim = train_set.S_mean.shape[1]
 
     if args.model == "jumpcnf" and args.tpp == "neural":
         model = JumpCNFSpatiotemporalModel(dim=x_dim,
