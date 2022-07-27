@@ -96,7 +96,7 @@ def get_t0_t1(data):
     elif data == "fmri":
         return torch.tensor([0.0]), torch.tensor([10.0])
     elif data == "swells":
-        return torch.tensor([0.0]), torch.tensor([7.0])
+        return torch.tensor([0.0]), torch.tensor([14.0])
     else:
         raise ValueError(f"Unknown dataset {data}")
 
@@ -179,9 +179,9 @@ def _main(rank, world_size, args, savepath, logger):
 
     t0, t1 = map(lambda x: cast(x, device), get_t0_t1(args.data))
 
-    train_set = load_data(args.data, split="train")
-    val_set = load_data(args.data, split="val")
-    test_set = load_data(args.data, split="test")
+    train_set = load_data(args.data, split="train", fset=args.fset)
+    val_set = load_data(args.data, split="val", fset=args.fset)
+    test_set = load_data(args.data, split="test", fset=args.fset)
 
     train_epoch_iter = EpochBatchIterator(
         dataset=train_set,
@@ -487,6 +487,7 @@ if __name__ == "__main__":
     parser.add_argument("--logfreq", type=int, default=10)
     parser.add_argument("--testfreq", type=int, default=100)
     parser.add_argument("--port", type=int, default=None)
+    parser.add_argument("--fset", type=int, default=0)
     args = parser.parse_args()
 
     if args.port is None:
@@ -526,6 +527,7 @@ if __name__ == "__main__":
     experiment_name += f"_lr{args.lr}"
     experiment_name += f"_gc{args.gradclip}"
     experiment_name += f"_bsz{args.max_events}x{args.ngpus}_wd{args.weight_decay}_s{args.seed}"
+    experiment_name += f"_fset{args.fset}"
     experiment_name += f"_{args.experiment_id}"
     savepath = os.path.join(args.experiment_dir, experiment_name)
 

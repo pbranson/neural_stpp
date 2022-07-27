@@ -142,15 +142,13 @@ class BOLD5000(SpatioTemporalDataset):
 
 class Swell(SpatioTemporalDataset):
 
-    def __init__(self, split="train"):
+    def __init__(self, split="train", fset=0):
         assert split in ["train", "val", "test"]
         self.split = split
-        dataset = np.load("data/swells/swells_rottnest.npz")
-        exclude_from_train = (dataset.files[::30] + dataset.files[1::30] + dataset.files[2::30] + dataset.files[3::30]
-                              + dataset.files[4::30] + dataset.files[5::30] + dataset.files[6::30] + dataset.files[7::30]
-                              + dataset.files[8::30] + dataset.files[9::30] + dataset.files[10::30])
-        val_files = dataset.files[3::30]
-        test_files = dataset.files[7::30]
+        dataset = np.load(f"data/swells/swells_rottnest_fset{fset}.npz")
+        exclude_from_train = (dataset.files[-260:] + dataset.files[0:-260:5])
+        val_files = dataset.files[-260:]
+        test_files = dataset.files[0:-260:5]
         train_files = set(dataset.files).difference(exclude_from_train)
         file_splits = {"train": train_files, "val": val_files, "test": test_files}
         train_set = [dataset[f] for f in train_files]

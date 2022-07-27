@@ -153,7 +153,7 @@ def plot_intensities(list_of_event_times, list_of_intensities, list_of_timevals,
     plt.close()
 
 
-def load_data(data, split="train"):
+def load_data(data, split="train", fset=0):
 
     if data == "citibike":
         return datasets.Citibike(split=split)
@@ -168,7 +168,7 @@ def load_data(data, split="train"):
     elif data == "fmri":
         return datasets.BOLD5000(split=split)
     elif data == "swells":
-        return datasets.Swell(split=split)
+        return datasets.Swell(split=split,fset=fset)
     else:
         raise ValueError(f"Unknown data option {data}")
 

@@ -7,55 +7,68 @@ import shutil
 import os
 import xarray as xr
 
+def get_fset(fset):
+    if fset == 0:
+        return ['hs','tp']
+    elif fset == 1:
+        return ['hs_u','hs_v','tp']
+    elif fset == 2:
+        return ['hs','dp_u','dp_v','tp']
 
-def preprocess():
+def preprocess(fset):
 
-    os.makedirs("earthquakes", exist_ok=True)
+    features = get_fset(fset)
 
-    ds = xr.open_zarr('test_partitions_chunked_pmt3.zarr.zip',chunks='auto').isel(site=0)
+    os.makedirs("swells", exist_ok=True)
+    outfile = f"swells/swells_rottnest_fset{fset}.npz"
+    if not os.path.exists(outfile):
 
-    basedate = pd.to_datetime(pd.to_datetime(ds.time[0].values).date())
-    ds['time'] = (ds.time - basedate.asm8)/pd.to_timedelta(1,'d')
+        ds = xr.open_zarr('test_partitions_chunked_pmt3.zarr.zip',chunks='auto').isel(site=0)
 
-    ds_events = ds.stack(event=['time','part'])
-    ds_events = ds_events.where(ds_events.hs > 0.1, drop=True)
-    ds_events['dp_rad'] = np.deg2rad(ds_events.dp + 7.5/2*np.random.randn(*ds_events.dp.shape))
-    ds_events['hs_u'], ds_events['hs_v'] = ds_events.hs * np.sin(ds_events.dp_rad), ds_events.hs * np.cos(ds_events.dp_rad),
+        basedate = pd.to_datetime(pd.to_datetime(ds.time[0].values).date())
+        ds['time'] = (ds.time - basedate.asm8)/pd.to_timedelta(1,'d')
 
-    ds_features = ds_events.reset_index('event').reset_coords()[['time','hs', 'tp']]
+        ds_events = ds.stack(event=['time','part'])
+        ds_events = ds_events.where(ds_events.hs > 0.1, drop=True)
+        ds_events['dp_rad'] = np.deg2rad(ds_events.dp + 7.5/2*np.random.randn(*ds_events.dp.shape))
+        ds_events['dp_u'], ds_events['dp_v'] = np.sin(ds_events.dp_rad), np.cos(ds_events.dp_rad),
+        ds_events['hs_u'], ds_events['hs_v'] = ds_events.hs * ds_events.dp_u, ds_events.hs * ds_events.dp_v
 
-    df = ds_features.to_pandas().reset_index().drop(columns='event')
+        ds_features = ds_events.reset_index('event').reset_coords()[['time',] + features]
 
-    df = df.set_index('time')
-    print(len(df))
-    df = df.dropna()
-    print(len(df))
+        df = ds_features.to_pandas().reset_index().drop(columns='event')
 
-    sequences = {}
-    for weeks in range(52 * 30 + 1):
-        date = basedate + pd.Timedelta(weeks=weeks)
+        df = df.set_index('time')
+        print(len(df))
+        df = df.dropna()
+        print(len(df))
 
-        seq_name = f"{date.year}{date.month:02d}" + f"{date.day:02d}"
+        sequences = {}
+        for weeks in range(0,52 * 40,2):
+            date = basedate + pd.Timedelta(weeks=weeks)
 
-        start = (date - basedate).days
-        end = (date + pd.Timedelta(days=7) - basedate).days
+            seq_name = f"{date.year}{date.month:02d}" + f"{date.day:02d}"
 
-        df_range = df[start+1/24:end-1/24]
-        df_range.index = df_range.index - start
+            start = (date - basedate).days
+            end = (date + pd.Timedelta(days=14) - basedate).days
 
-        t = df_range.index + np.random.uniform(-1,1,size=df_range.index.shape) * 0.5/24
-        t = t.values
-        sort_inds = t.argsort()
-        t = t[sort_inds]
-        x = df_range.to_numpy().astype(np.float64)[sort_inds]
-        print(len(t))
+            df_range = df[start+1/24:end-1/24]
+            df_range.index = df_range.index - start
 
-        sequences[seq_name] = np.concatenate([t[:,None],x],axis=1)
+            t = df_range.index + np.random.uniform(-1,1,size=df_range.index.shape) * 0.5/24
+            t = t.values
+            sort_inds = t.argsort()
+            t = t[sort_inds]
+            x = df_range.to_numpy().astype(np.float64)[sort_inds]
+            print(len(t))
 
-    np.savez("swells/swells_rottnest.npz", **sequences)
+            sequences[seq_name] = np.concatenate([t[:,None],x],axis=1)
+
+        np.savez(outfile, **sequences)
     print("Preprocessing complete.")
 
 
 if __name__ == "__main__":
-    
-    preprocess()
+    import sys
+
+    preprocess(int(sys.argv[1]))
