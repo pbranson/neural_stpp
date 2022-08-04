@@ -29,7 +29,8 @@ def preprocess(fset):
     outfile = f"swells/swells_rottnest_fset{fset}.npz"
     if not os.path.exists(outfile):
 
-        ds = xr.open_zarr('test_partitions_pmt3.2.zarr.zip',chunks='auto').isel(site=0)
+        ds = xr.open_zarr('test_partitions_pmt3.2.zarr.zip',chunks='auto')
+        ds['tp'] = 1/ds['fp']
 
         basedate = pd.to_datetime(pd.to_datetime(ds.time[0].values).date())
         ds['time'] = (ds.time - basedate.asm8)/pd.to_timedelta(1,'d')
@@ -46,14 +47,13 @@ def preprocess(fset):
         ds_events['dpn_rad'] = np.deg2rad(ds_events.dpn)
         ds_events['dp_u'], ds_events['dp_v'] = np.sin(ds_events.dpn_rad), np.cos(ds_events.dpn_rad),
         ds_events['hs_u'], ds_events['hs_v'] = ds_events.hs * ds_events.dp_u, ds_events.hs * ds_events.dp_v
+        ds_events['t_u'] = np.sin(ds_events['time']/366*2.*np.pi)
+        ds_events['t_v'] = np.cos(ds_events['time']/366*2.*np.pi)
 
         ds_features = ds_events.reset_index('event').reset_coords()[['time',] + features]
-
         df = ds_features.to_pandas().reset_index().drop(columns='event')
-
         df = df.set_index('time')
-        df['t_u'] = np.sin(df.index.day_of_year/366*2.*np.pi)
-        df['t_v'] = np.cos(df.index.day_of_year/366*2.*np.pi)
+
         print(len(df))
         df = df.dropna()
         print(len(df))
