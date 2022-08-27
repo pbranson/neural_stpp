@@ -29,14 +29,19 @@ def preprocess(fset):
     outfile = f"swells/swells_rottnest_fset{fset}.npz"
     if not os.path.exists(outfile):
 
-        ds = xr.open_zarr('test_partitions_pmt3.2.zarr.zip',chunks='auto')
-        ds['tp'] = 1/ds['fp']
+        # ds = xr.open_zarr('test_partitions_pmt3.2.zarr.zip',chunks='auto')
+        # ds['tp'] = 1/ds['fp']
 
-        basedate = pd.to_datetime(pd.to_datetime(ds.time[0].values).date())
-        ds['time'] = (ds.time - basedate.asm8)/pd.to_timedelta(1,'d')
+        # basedate = pd.to_datetime(pd.to_datetime(ds.time[0].values).date())
+        # ds['time'] = (ds.time - basedate.asm8)/pd.to_timedelta(1,'d')
 
-        ds_events = ds.stack(event=['time','part'])
-        ds_events = ds_events.where(ds_events.hs > 0.1, drop=True)
+        # ds_events = ds.stack(event=['time','part'])
+        # ds_events = ds_events.where(ds_events.hs > 0.1, drop=True)
+
+        ds_events = pd.read_csv('test_partitions_pmt3.2_trains_peaks_lenGT2.csv')
+        ds_events['time'] = ds_events['time']/24
+        # ds_events = ds_events.set_index('time')
+        basedate = pd.to_datetime('1980-01-01')
 
         maxT = 28.571428298950195
         ds_events['dpn'] = ds_events.dp + 15*0.367*(np.random.randn(*ds_events.dp.shape))
@@ -50,9 +55,10 @@ def preprocess(fset):
         ds_events['t_u'] = np.sin(ds_events['time']/366*2.*np.pi)
         ds_events['t_v'] = np.cos(ds_events['time']/366*2.*np.pi)
 
-        ds_features = ds_events.reset_index('event').reset_coords()[['time',] + features]
-        df = ds_features.to_pandas().reset_index().drop(columns='event')
+        df = ds_events[['time',] + features]
+        # df = ds_features.to_pandas().reset_index().drop(columns='event')
         df = df.set_index('time')
+        df = df.sort_index()
 
         print(len(df))
         df = df.dropna()
@@ -65,7 +71,7 @@ def preprocess(fset):
             seq_name = f"{date.year}{date.month:02d}" + f"{date.day:02d}"
 
             start = (date - basedate).days
-            end = (date + pd.Timedelta(days=14) - basedate).days
+            end = (date + pd.Timedelta(days=28) - basedate).days
 
             df_range = df[start+1/24:end-1/24]
             df_range.index = df_range.index - start
